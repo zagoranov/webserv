@@ -32,8 +32,12 @@ var (
 
 func writeData() {
 	mu.Lock()
-	log.Println("Last message:", cacheList.Back().Value.(incomingPacket).MessageType, ", List size:", cacheList.Len())
-	//time.Sleep(time.Millisecond * 300)
+	packet := cacheList.Back()
+	if packet != nil {
+		log.Println("Proceeding message:", packet.Value.(incomingPacket).MessageType, ", List size:", cacheList.Len())
+		//time.Sleep(time.Millisecond * 300)    //test!
+		cacheList.Remove(packet)
+	}
 	defer mu.Unlock()
 }
 
@@ -42,11 +46,14 @@ func jsonHandler(rw http.ResponseWriter, req *http.Request) {
 	var packet incomingPacket
 	err := decoder.Decode(&packet)
 	if err != nil {
-		log.Fatal("jsonResp: ", err)
+		log.Println("jsonHandler: ", err)
+		fmt.Fprintf(rw, "Bad data received from you, no comprendo")
 		//panic(err)
+	} else {
+		cacheList.PushBack(packet)
+		fmt.Fprintf(rw, "Ok")
+		go writeData()
 	}
-	cacheList.PushBack(packet)
-	go writeData()
 }
 
 func HomeRouterHandler(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +70,7 @@ func HomeRouterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	log.Printf("Запуск сервера")
+	log.Printf("Server started")
 	http.HandleFunc("/", HomeRouterHandler)
 	http.HandleFunc("/json", jsonHandler)
 	err := http.ListenAndServe(":9000", nil)
