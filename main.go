@@ -13,9 +13,28 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 )
+
+var settings struct {
+	ServerMode bool   `json:"serverMode"`
+	SourceDir  string `json:"sourceDir"`
+	TargetDir  string `json:"targetDir"`
+}
+
+func readConfig() {
+	configFile, err := os.Open("config.json")
+	if err != nil {
+		log.Println("opening config file", err.Error())
+	}
+	jsonParser := json.NewDecoder(configFile)
+	if err = jsonParser.Decode(&settings); err != nil {
+		log.Println("parsing config file", err.Error())
+	}
+	//fmt.Printf("%v %s %s", settings.ServerMode, settings.SourceDir, settings.TargetDir)
+}
 
 type incomingPacket struct {
 	DateTime    string
@@ -70,6 +89,7 @@ func HomeRouterHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	readConfig()
 	log.Printf("Server started")
 	http.HandleFunc("/", HomeRouterHandler)
 	http.HandleFunc("/json", jsonHandler)
