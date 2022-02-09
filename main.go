@@ -18,7 +18,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/zagoranov/webserv/untargz"
+	"webserv/untargz"
+	//"github.com/zagoranov/webserv/untargz"
 )
 
 var settings struct {
