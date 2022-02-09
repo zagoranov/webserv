@@ -61,24 +61,22 @@ func writeData() {
 	mu.Lock()
 	packet := cacheList.Back()
 	if packet != nil {
+		cacheList.Remove(packet)
+		mu.Unlock()
+
 		log.Println("Proceeding message: '", packet.Value.(incomingPacket).MessageType, "' , from camera:", packet.Value.(incomingPacket).CameraId, "List size:", cacheList.Len())
-
-		//time.Sleep(time.Millisecond * 300)    //test!
-
 		if packet.Value.(incomingPacket).FileName != "" {
-			log.Println("Extracting file:", packet.Value.(incomingPacket).FileName)
-			r, err := os.Open(packet.Value.(incomingPacket).FileName)
-			if err != nil {
-				log.Println("Error opening file", err)
-			} else {
-				untargz.ExtractTarGz(r)
-			}
-			defer r.Close()
+			//temp dir, unpack to temp dir
+			untargz.ReadAndExtract(packet.Value.(incomingPacket).FileName)
+			//for file in files
+			//coping pics
+			//reading jsons, save data to db
+			//deleting temp dir
 		}
 
-		cacheList.Remove(packet)
+	} else {
+		mu.Unlock()
 	}
-	defer mu.Unlock()
 }
 
 func jsonHandler(rw http.ResponseWriter, req *http.Request) {

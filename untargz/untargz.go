@@ -8,6 +8,19 @@ import (
 	"os"
 )
 
+func ReadAndExtract(FileName string) {
+	if FileName != "" {
+		log.Println("Extracting file:", FileName)
+		reader, err := os.Open(FileName)
+		if err != nil {
+			log.Println("Error opening file", err)
+		} else {
+			ExtractTarGz(reader)
+		}
+		defer reader.Close()
+	}
+}
+
 func ExtractTarGz(gzipStream io.Reader) {
 	uncompressedStream, err := gzip.NewReader(gzipStream)
 	if err != nil {
@@ -15,7 +28,7 @@ func ExtractTarGz(gzipStream io.Reader) {
 	} else {
 		tarReader := tar.NewReader(uncompressedStream)
 
-		for true {
+		for {
 			header, err := tarReader.Next()
 
 			if err == io.EOF {
