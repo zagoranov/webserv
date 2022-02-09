@@ -2,7 +2,8 @@ package main
 
 //import --> const --> var --> init()
 
-// curl -X POST -d "{\"MessageType\": \"Alert\"}" http://localhost:9000/json
+// curl -X POST -d "{\"MessageType\": \"Alert\", \"CameraId\": 42 }" http://localhost:9000/json
+// curl -X POST -d "{\"MessageType\": \"Alert\", \"CameraId\": 42, \"FileName\": \"docs.tar.gz\" }" http://localhost:9000/json
 
 // Multithread test:
 // curl -X POST -d "{\"MessageType\": \"Alert1\"}" http://localhost:9000/json | curl -X POST -d "{\"MessageType\": \"Alert2\"}" http://localhost:9000/json | curl -X POST -d "{\"MessageType\": \"Alert3\"}" http://localhost:9000/json  |  curl -X POST -d "{\"MessageType\": \"Alert4\"}" http://localhost:9000/json |  curl -X POST -d "{\"MessageType\": \"Alert5\"}" http://localhost:9000/json
@@ -16,6 +17,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/zagoranov/webserv/untargz"
 )
 
 var settings struct {
@@ -28,15 +31,19 @@ func readConfig() {
 	configFile, err := os.Open("config.json")
 	if err != nil {
 		log.Println("opening config file", err.Error())
+		panic(err)
 	}
 	jsonParser := json.NewDecoder(configFile)
 	if err = jsonParser.Decode(&settings); err != nil {
 		log.Println("parsing config file", err.Error())
+		panic(err)
 	}
 	//fmt.Printf("%v %s %s", settings.ServerMode, settings.SourceDir, settings.TargetDir)
+	defer configFile.Close()
 }
 
 type incomingPacket struct {
+	CameraId    int
 	DateTime    string
 	MessageType string
 	MessageText string
@@ -53,8 +60,21 @@ func writeData() {
 	mu.Lock()
 	packet := cacheList.Back()
 	if packet != nil {
-		log.Println("Proceeding message:", packet.Value.(incomingPacket).MessageType, ", List size:", cacheList.Len())
+		log.Println("Proceeding message: '", packet.Value.(incomingPacket).MessageType, "' , from camera:", packet.Value.(incomingPacket).CameraId, "List size:", cacheList.Len())
+
 		//time.Sleep(time.Millisecond * 300)    //test!
+
+		if packet.Value.(incomingPacket).FileName != "" {
+			log.Println("Extracting file:", packet.Value.(incomingPacket).FileName)
+			r, err := os.Open(packet.Value.(incomingPacket).FileName)
+			if err != nil {
+				log.Println("Error opening file", err)
+			} else {
+				untargz.ExtractTarGz(r)
+			}
+			defer r.Close()
+		}
+
 		cacheList.Remove(packet)
 	}
 	defer mu.Unlock()
